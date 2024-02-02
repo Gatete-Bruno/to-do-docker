@@ -1,0 +1,68 @@
+The Todo App solution will use a number of ports that needs to be available (i.e. not occupied by other app/service) for it to work properly.
+
+If you get a message such as for example "listen tcp 0.0.0.0:8080: bind: address already in use", then you know that port 8080 is not available. In these cases you can change the port and still get it to work.
+
+Here are the ports that will need to be free and available:
+
+3000 = API Server
+
+4200 = Angular Client
+
+5432 = Postgres Database Server
+
+6379 = Redis Caching Server
+
+9200,9300 = Elastic Search Server
+
+8080 = Will be used later on for a Nginx proxy
+
+One of the benefits of using containers is that it is very easy to change the port that we expose to the outer world.
+
+Take for example the Postgres Database server, if you already run Postgres locally you will have a problem starting the container we are working with. You can then easily change port mapping when you start to the container as follows:
+
+$ docker run -d --network todo-net --name todo-postgres -p 5433:5432 -e POSTGRES_USER=todo -e POSTGRES_PASSWORD=todo1234 -e POSTGRES_DB=todo postgres:11.2
+
+Here I'm changing the port of Postgres to be 5433 instead of 5432. When you change the port you would also have to change the Todo application configuration for the API Server so it can find the Postgres Database server. You can do that in the /todo-api/local_env_props.js file.
+
+The port conflict problem is a common one and Docker and Kubernetes have good solutions for this. When we for example run all our Todo App Solution components as containers they can all communicate over the Docker network and port conflicts are not an issue. You don't even have to expose the ports that containers use if you just communicate over the Docker network.
+
+Checking port availability can be done with the following command on Linux based systems:
+
+$ netstat -an |grep LISTEN
+tcp 0 0 127.0.0.1:10251 0.0.0.0:* LISTEN
+tcp 0 0 127.0.0.1:10252 0.0.0.0:* LISTEN
+tcp 0 0 127.0.0.1:2380 0.0.0.0:* LISTEN
+tcp 0 0 127.0.0.1:10256 0.0.0.0:* LISTEN
+tcp 0 0 127.0.0.1:8080 0.0.0.0:* LISTEN
+tcp 0 0 127.0.0.1:39699 0.0.0.0:* LISTEN
+tcp 0 0 127.0.0.53:53 0.0.0.0:* LISTEN
+tcp 0 0 0.0.0.0:22 0.0.0.0:* LISTEN
+tcp 0 0 127.0.0.1:1338 0.0.0.0:* LISTEN
+tcp 0 0 127.0.0.1:10248 0.0.0.0:* LISTEN
+tcp 0 0 127.0.0.1:10249 0.0.0.0:* LISTEN
+tcp6 0 0 :::10250 :::* LISTEN
+tcp6 0 0 :::10255 :::* LISTEN
+tcp6 0 0 :::10257 :::* LISTEN
+tcp6 0 0 :::10259 :::* LISTEN
+tcp6 0 0 :::22 :::* LISTEN
+tcp6 0 0 :::16443 :::* LISTEN
+
+
+##Create Network for todo
+docker network create todo-net
+
+##Create Postgres Container
+docker run --network todo-net --name todo-postgres -p 5432:5432 -e POSTGRES_USER=todo -e POSTGRES_PASSWORD=todo1234 -e POSTGRES_DB=todo -d postgres:latest
+
+##Create Redis Cache Container
+docker run --network todo-net --name todo-redis -d -p 6379:6379 redis:5.0.3
+
+##Create Elastic Search Container
+docker run --network todo-net --name todo-elastic -d -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:6.6.1
+
+
+
+docker build -f Dockerfile.dev -t todo-api:1.0 .
+
+##RUN the fully Containerized App SOlution
+docker run --name todo-api --network todo-net -v /app/node_modules -p 3000:3000 -e POSTGRES_HOST=todo-postgres -e POSTGRES_PORT=5432 -e POSTGREs_DATABASE=todo -e POSTGRES_USER=todo -e POSTGRES_PASSWORD=todo1234 -e REDIS_HOST=todo-redis -e REDIS_PORT=6379 -e ELASTICSEARCH_HOST=todo-elastic -e ELASTICSEARCH_PORT=9200 -it todo-api:1.0

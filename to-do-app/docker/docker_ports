@@ -64,8 +64,12 @@ docker run --network todo-net --name todo-elastic -d -p 9200:9200 -p 9300:9300 -
 
 docker build -f Dockerfile.dev -t todo-api:1.0 .
 
+docker build . -f Dockerfile.dev --tag todo-view:1.0
+
 ##RUN the fully Containerized App SOlution
 docker run --name todo-api --network todo-net -v /app/node_modules -p 3000:3000 -e POSTGRES_HOST=todo-postgres -e POSTGRES_PORT=5432 -e POSTGREs_DATABASE=todo -e POSTGRES_USER=todo -e POSTGRES_PASSWORD=todo1234 -e REDIS_HOST=todo-redis -e REDIS_PORT=6379 -e ELASTICSEARCH_HOST=todo-elastic -e ELASTICSEARCH_PORT=9200 -it todo-api:1.0
 
 
 docker build . -f Dockerfile.dev --tag todo-view:1.0
+
+docker build . -f Dockerfile.dev --tag todo-proxy:1.0
